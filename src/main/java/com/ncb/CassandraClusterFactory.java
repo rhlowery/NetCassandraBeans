@@ -1,6 +1,7 @@
 package com.ncb;
 
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.Cluster.Builder;
 import com.datastax.driver.core.Host;
 import com.datastax.driver.core.Session;
 import java.beans.IntrospectionException;
@@ -94,9 +95,16 @@ class CassandraClusterFactory extends ChildFactory.Detachable<Cluster> implement
         String port = split[1];
         System.out.println("host = " + host);
         System.out.println("port = " + port);
-        Cluster cluster = Cluster.builder().
-                addContactPointsWithPorts(Collections.singleton(new InetSocketAddress(host, Integer.valueOf(port)))).
-                build();
+        String clusterAuth = NbPreferences.forModule(CassandraRootNode.class).get(host+":"+port, null);
+        Builder builder = Cluster.builder();
+        builder.addContactPointsWithPorts(Collections.singleton(new InetSocketAddress(host, Integer.valueOf(port))));
+        if ( clusterAuth != null ) {
+            String[] split2 = clusterAuth.split(":");
+            String user = split2[0];
+            String pass = split2[1];
+            builder.withCredentials(user, pass);
+        }
+        Cluster cluster = builder.build();
         cluster.register(this);
         session = cluster.connect();
         System.out.println("Connected to cluster " + cluster.getClusterName());
